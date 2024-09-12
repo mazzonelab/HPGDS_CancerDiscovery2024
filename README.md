@@ -1,3 +1,3 @@
 # HPGDS_CancerDiscovery2024
 
-This repositary contains all source code used to analyze data in "Effective immunotherapy for melanoma shapes the microenvironment by 1 inhibiting prostaglandin-D2 production in macrophages"
+This repository contains all bioinformatics code that was used to analyze data in "Effective immunotherapy for melanoma shapes the microenvironment by inhibiting prostaglandin-D2 production in macrophages".
