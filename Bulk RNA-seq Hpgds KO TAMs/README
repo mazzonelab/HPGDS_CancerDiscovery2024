@@ -1,0 +1,65 @@
+"Bulk RNA-seq Hpgds KO TAMs.R" contains all code needed to reconstruct the figures of the manuscript.
+
+If you would like to re-analyze the data yourself starting from the fastq files, you can download them from the GEO repository.
+
+Installed packages:
+- FastQC: v0.12.1
+- MultiQC: v1.19
+- STAR: v2.7.10b
+- featureCounts: v2.0.1
+
+###### Step 0 #####
+Download the fastq files from GEO and put them in your working directory of choice (called 'WORKING_DIR' here, replace this with your own path):
+
+##### Step 1 #####
+Perform quality control on fastq files
+
+fastqc *.fq.gz  \
+	--outdir WORKING_DIR/MultiQC \ 
+	--threads 10 
+
+multiqc WORKING_DIR/MultiQC/*_fastqc.zip \ 
+	--outdir WORKING_DIR/1/MultiQC/ 
+
+##### Step 2 #####
+Map to the mouse reference genome. The following command uses a loop to run STAR on each pair of fastq files in the current directory.
+
+	## Step 2a ##
+    If needed, construct an index for the mouse reference genome using STAR. The latest version of mm39 reference genome is available here: https://www.gencodegenes.org/mouse/
+
+		STAR --runThreadN 70 \
+			 --runMode genomeGenerate \
+			 --genomeDir STARindex_150bp/ \
+			 --genomeFastaFiles  GRCm39.genome.fa \
+			 --sjdbGTFfile gencode.vM32.annotation.gtf \
+			 --sjdbOverhang 149
+
+	## Step 2b ##
+    Map reads to the mouse reference genome using STAR. The code below uses a loop to run STAR on each read pair that is present in the current directory. 
+
+		for f in `ls -1 *_1.fq.gz | sed 's/_1.fq.gz//'`; \
+		do \
+		STAR --runThreadN 70 \
+		--genomeDir STARindex_150bp/ \
+		--sjdbGTFfile gencode.vM32.annotation.gtf \
+		--readFilesIn ${f}_1.fq.gz ${f}_2.fq.gz \
+		--readFilesCommand zcat \
+		--outSAMtype BAM SortedByCoordinate \
+		--outFileNamePrefix ${f}_; \
+		done
+
+##### Step 3 #####
+Assign mapped sequencing reads to genomic features using Rsubread. This function uses all bam files that are present in the current directory as input. Afterwards, we create a tsv file from the output.
+
+	featureCounts \
+    	-T 10 \
+    	-g gene_name \
+    	-p \
+    	-a gencode.vM32.annotation.gtf \
+    	-o genecounts_s2.counts \
+    	-s 2 \
+    	*.bam 
+
+	cut -f1,7- genecounts_s2.counts | grep -v '^#' > genecounts_s2.counts.counts
+
+The final count matrix can also be downloaded from the GEO repository.
