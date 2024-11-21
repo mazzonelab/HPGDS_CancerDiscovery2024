@@ -105,6 +105,7 @@ dlbc.phe.n <- filter(dlbc.phe, sample_type.samples == "Solid Tissue Normal")
 dlbc.phe.t <- rbind(dlbc.phe.t, dlbc.phe.n)
 merge_phe_fpkm <- intersect(rownames(dlbc.phe.t), colnames(dlbc.fpkm.pro))
 dlbc.exp <- dlbc.fpkm.pro[ , merge_phe_fpkm]
+#GETX
 gtex.exp <- fread("gtex_RSEM_gene_fpkm.gz", header = T, sep = '\t', data.table = F)
 gtex.pro <- fread("gencode.v22.annotation.gene.probemap", header = T, sep = '\t', data.table = F)
 gtex.pro <- gtex.pro[, c(2,3)]
