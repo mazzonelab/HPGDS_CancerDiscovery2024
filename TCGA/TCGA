@@ -11,8 +11,14 @@ library(CIBERSORT)
 library(IOBR)
 library(ggExtra)
 library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(readxl)
+library(data.table) 
+library(ggsignif)
+library(limma)
 
-###Figure 1A###
+###Figure S1B###
 setwd("########")
 project <- "TCGA-SKCM" 
 data_category <- "Transcriptome Profiling"
@@ -21,16 +27,11 @@ workflow_type <- "STAR - Counts"
 query <- GDCquery(project = project,
                   data.category = data_category,
                   data.type = data_type,
-                  workflow.type = workflow_type
-)
+                  workflow.type = workflow_type)
 GDCdownload(query = query,files.per.chunk = 50)
 GDCprepare(query,save = T,save.filename = paste0(project,"_transcriptome.Rdata"))
 # load data
 load(file = paste0(project,"_transcriptome.Rdata"))
-# get data
-a <- assays(data)
-r <- rowRanges(data)
-c <- colData(data)
 expr_counts_mrna <- assay(se_mrna,"unstranded")
 expr_tpm_mrna <- assay(se_mrna,"tpm_unstrand")
 expr_fpkm_mrna <- assay(se_mrna,"fpkm_unstrand")
@@ -80,3 +81,60 @@ p13 <- ggMarginal(p12, type = "histogram", xparams = list(fill ="orange"),
             yparams = list(fill ="skyblue"))
 
 ggsave(p13, file="macrophage.jpg", height=8, width=8)
+
+
+###Figure S11F###
+setwd("########")
+dlbc.fpkm <- fread("TCGA-PAAD.htseq_fpkm.tsv.gz", header = T, sep = '\t', data.table = F)
+dlbc.pro <- fread("gencode.v22.annotation.gene.probeMap", header = T, sep = '\t', data.table = F)
+dlbc.pro <- dlbc.pro[ , c(1, 2)]
+dlbc.fpkm.pro <- merge(dlbc.pro, dlbc.fpkm, by.y  = "Ensembl_ID", by.x = "id" )
+dlbc.fpkm.pro <- distinct(dlbc.fpkm.pro,gene, .keep_all = T)
+rownames(dlbc.fpkm.pro) <- dlbc.fpkm.pro$gene
+dlbc.fpkm.pro <- dlbc.fpkm.pro[ , -c(1,2)]
+dim(dlbc.fpkm.pro) # 58387  182
+head(dlbc.fpkm.pro)[1:5, 1:5]
+dlbc.phe <- fread("TCGA-PAAD.GDC_phenotype.tsv.gz", header = T, sep = '\t', data.table = F)
+dlbc.phe$submitter_id.samples[1:5]
+rownames(dlbc.phe) <- dlbc.phe$submitter_id.samples
+table(dlbc.phe$sample_type.samples)
+dlbc.phe.t <- filter(dlbc.phe, sample_type.samples == "Primary Tumor")
+#extract primary tumor and normal samples
+dlbc.phe.n <- filter(dlbc.phe, sample_type.samples == "Solid Tissue Normal")
+# merge primary tumor and normal samples
+dlbc.phe.t <- rbind(dlbc.phe.t, dlbc.phe.n)
+merge_phe_fpkm <- intersect(rownames(dlbc.phe.t), colnames(dlbc.fpkm.pro))
+dlbc.exp <- dlbc.fpkm.pro[ , merge_phe_fpkm]
+gtex.exp <- fread("gtex_RSEM_gene_fpkm.gz", header = T, sep = '\t', data.table = F)
+gtex.pro <- fread("gencode.v22.annotation.gene.probemap", header = T, sep = '\t', data.table = F)
+gtex.pro <- gtex.pro[, c(2,3)]
+length(intersect(gtex.pro$id, dlbc.pro$id))  # 60843
+length(intersect(rownames(dlbc.exp), gtex.fpkm.pro$gene)) # 40635
+gtex.fpkm.pro <- merge(gtex.pro, gtex.exp, by.y ="sample", by.x = "id" )
+gtex.phe <- fread("GTEX_phenotype.gz", header = T, sep = '\t', data.table = F)
+rownames(gtex.phe) <- gtex.phe$Sample
+colnames(gtex.phe) <- c("Sample", "body_site_detail (SMTSD)", "primary_site", "gender", "patient", "cohort")
+gtex.phe.s <- filter(gtex.phe, primary_site == "Pancreas")
+merge_phe_fpkm_gtex <- intersect(rownames(gtex.phe.s), colnames(gtex.fpkm.pro)) 
+gtex.s <- gtex.fpkm.pro[ , c("gene", merge_phe_fpkm_gtex)]
+gtex.s <- distinct(gtex.s, gene, .keep_all = T)
+rownames(gtex.s) <- gtex.s$gene
+gtex.s <- gtex.s[ , -1]
+gtex.s2 <- 2^gtex.s
+gtex.s3 <- log2(gtex.s2-0.001+1)
+all.data <- merge(gtex.s3, dlbc.exp, by = 0)
+all.data <- column_to_rownames(all.data, "Row.names")
+nromalized.data <- normalizeBetweenArrays(all.data)
+nromalized.data <- as.data.frame(nromalized.data)
+exprSet.all.r=nromalized.data[c("HPGDS"),]
+exprSet.all.r=t(exprSet.all.r)
+exprSet.all.r=as.data.frame(exprSet.all.r)
+x=c(rep("Normal",167),rep("Tumor",177))
+exprSet.all.r$Type=x
+
+p20 <- ggboxplot(exprSet.all.r, x = "Type", y = "HPGDS", 
+          color = "Type", palette = c("#00AFBB", "#F8766D"),
+          add = "jitter", ylab = "HPGDS expression", xlab = "")+
+    stat_compare_means(comparisons = list(c("Normal", "Tumor")), label = "p.adj")+
+    theme_classic()+theme(legend.position = "none")
+ggsave("HPGDS.jpg", p20, width = 4, height = 4, dpi = 300)
