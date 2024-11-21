@@ -398,7 +398,85 @@ ggsave(p17 ,file="vln1.jpg",height = 3, width = 5)
 
 
 ###Figure S1F###
+GC_all_immune <- readRDS('GC_all_immune_final_version.rds')
 
+table(GC_all_immune$high_resolution_clusters)
+macrophages <- GC_all_immune %>% subset(high_resolution_clusters %in% c("Macrophages_CXCL9",
+                                                                        "Macrophages_LYVE1",
+                                                                        "Macrophages_CCL3",
+                                                                        "Macrophages_SPP1",
+                                                                        "Macrophages_PLA2G2D")
+)
+levels(as.factor(macrophages$high_resolution_clusters))
+macrophages$HPGDS_positive <- ifelse(macrophages@assays$SCT@data["HPGDS",] > 0,
+                                     "HPGDS_positive",
+                                     "HPGDS_negative")
+#
+TEST <- macrophages@meta.data
+TEST$high_resolution_clusters <- gsub(x = TEST$high_resolution_clusters,
+                                      pattern = '_',
+                                      replacement = '.')
+levels(as.factor(TEST$high_resolution_clusters))
+#
+# make percentages
+cell_num <- TEST %>%
+  mutate(sample_id = as.factor(paste(sample_ID,
+                                     Response,
+                                     Timepoint, 
+                                     patient_ID,
+                                     sep="_"))) %>%
+  mutate(HPGDS_positive = as.factor(HPGDS_positive)) %>%
+  group_by(sample_id, HPGDS_positive, .drop=FALSE) %>%  dplyr::summarise(n=n()) %>%
+  tidyr::separate(sample_id, c("sample_ID", 
+                               "Response", 
+                               "Timepoint", 
+                               "patient_ID"))
+cell_num
+total_cells<- TEST %>%
+  group_by(sample_ID) %>%
+  dplyr::summarise(total = n())
+total_cells
+
+cell_percentage<- left_join(cell_num, total_cells) %>%
+  mutate(percentage = n/total*100)
+cell_percentage
+cell_percentage$var <- paste(cell_percentage$Timepoint,cell_percentage$Response, sep = "_")
+cell_percentage$var <- ordered(cell_percentage$var, levels = c("BT_NR", "OT_NR", "BT_R",'OT_R'))
+
+# keep only positive for cell_percentage 
+cell_percentage <- cell_percentage[cell_percentage$HPGDS_positive=='HPGDS_positive',]
+cell_percentage
+
+# Rename sample
+cell_percentage <- cell_percentage %>%
+  mutate(patient_ID = ifelse(sample_ID == "scrCMA040", "16_bis", patient_ID))
+cell_percentage <- cell_percentage %>%
+  mutate(patient_ID = ifelse(sample_ID == "scrCMA048", "16_bis", patient_ID))
+
+comparison1 <- list(c("BT_NR", "OT_NR"), c("BT_R",'OT_R'))
+
+p18 <- ggboxplot(cell_percentage, x = "var", y = "percentage",
+          fill = "Timepoint",
+          shape = "Response",
+          palette = c("#F8766D","#00B8E7"),
+          add = "jitter",
+          order = c("BT_NR", "OT_NR", "BT_R",'OT_R')) +
+          #
+          geom_signif(comparisons = comparison1, 
+                      step_increase = 0.1, 
+                      test = 'wilcox.test', 
+                      test.args = list(paired=T)) +
+          #
+          geom_line(aes(group = patient_ID), alpha = 0.6, colour = "black") +
+          #  
+          facet_wrap(~HPGDS_positive, scales = "free_y") +
+          theme_classic() + 
+          RotatedAxis() +  
+          theme(text=element_text(size=12),
+                axis.text.x = element_text(angle = 90,hjust = 1),
+                plot.title = element_text(hjust = 0.5)
+                )
+ggsave(p18, file="paired analysis.jpg", height = 4, width = 8)
 
 ###Figure S1G###
 count=read.delim("GSE120575_Sade_Feldman_melanoma_single_cells_TPM_GEO.txt.gz", stringsAsFactors = F, header = T)
