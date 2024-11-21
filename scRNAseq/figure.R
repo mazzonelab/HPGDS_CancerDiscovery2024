@@ -478,6 +478,7 @@ p18 <- ggboxplot(cell_percentage, x = "var", y = "percentage",
                 )
 ggsave(p18, file="paired analysis.jpg", height = 4, width = 8)
 
+                       
 ###Figure S1G###
 count=read.delim("GSE120575_Sade_Feldman_melanoma_single_cells_TPM_GEO.txt.gz", stringsAsFactors = F, header = T)
 count[1:10,1:10]
