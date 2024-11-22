@@ -102,32 +102,7 @@ ggsave(p3, file="HPGDS_GSE1195978.jpg", width = 8, height = 6)
 
 ###Figure 1D###
 setwd("########")
-count=read.delim("GSE120575_Sade_Feldman_melanoma_single_cells_TPM_GEO.txt.gz", stringsAsFactors = F, header = T)
-count[1:10,1:10]
-tirosh_genes <- count[-1,-1]
-tirosh_genes[1:5,1:5]
-meta <- read.delim("meta.txt")
-meta <- meta %>% column_to_rownames("title")
-GSE120575 <- CreateSeuratObject(counts = tirosh_genes, meta.data = meta, min.cells = 3, min.features = 100)
-#remove NA columns
-toRemove <- "H9_P5_M67_L001_T_enriched"
-GSE120575 <- GSE120575[,!colnames(GSE120575) %in% toRemove]
-Idents(GSE120575)=GSE120575$characteristics..response
-GSE120575 <- subset(GSE120575, idents = c("Non-responder", "Responder"))
-#downstream analysis
-GSE120575 <- NormalizeData(GSE120575, normalization.method = "LogNormalize", scale.factor = 10000)
-GSE120575 <- FindVariableFeatures(GSE120575, selection.method = "vst", nfeatures = 2000)
-GSE120575 <- ScaleData(GSE120575)
-GSE120575 <- RunPCA(GSE120575)
-GSE120575 <- FindNeighbors(GSE120575, dims = 1:10)
-GSE120575 <- FindClusters(GSE120575, resolution = 0.4)
-GSE120575 <- RunUMAP(GSE120575, dims = 1:10)
-#rename clusters
-new.cluster.ids <- c("T_cells", "T_cells", "T_cells", 
-                     "B_cell", "NK_cell", "T_cells",
-                     "Monocyte", "Macrophage", "B_cell","B_cell","B_cell")
-names(new.cluster.ids) <- levels(GSE120575)
-GSE120575 <- RenameIdents(GSE120575, new.cluster.ids)
+GSE120575 <- readRDS("GSE120575.rds")) #dataset from GSE120575
 GSE120575$celltype <- Idents(GSE120575)
 ##plot vlnplot
 p4 <- VlnPlot(GSE120575, features = "HPGDS", add.noise = T, cols = c("#F8766D","#CD9600","#00A9FF","#FF61CC","#F8766D"))+scale_x_discrete(limits = c("B_cell","NK_cell","Monocyte","Macrophage","T_cells")) +
@@ -480,6 +455,7 @@ ggsave(p18, file="paired analysis.jpg", height = 4, width = 8)
 
                        
 ###Figure S1G###
+GSE120575 <- readRDS("GSE120575.rds"))   #dataset from GSE120575
 Idents(GSE120575)=GSE120575$celltype
 mac_cluster <- subset(GSE120575, idents = c("Monocyte", "Macrophage"))
 view(mac_cluster@meta.data)
