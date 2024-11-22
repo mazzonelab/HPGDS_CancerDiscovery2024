@@ -85,51 +85,53 @@ ggsave(p13, file="macrophage.jpg", height=8, width=8)
 
 ###Figure S11F###
 setwd("########")
-dlbc.fpkm <- fread("TCGA-PAAD.htseq_fpkm.tsv.gz", header = T, sep = '\t', data.table = F)
-dlbc.pro <- fread("gencode.v22.annotation.gene.probeMap", header = T, sep = '\t', data.table = F)
-dlbc.pro <- dlbc.pro[ , c(1, 2)]
-dlbc.fpkm.pro <- merge(dlbc.pro, dlbc.fpkm, by.y  = "Ensembl_ID", by.x = "id" )
-dlbc.fpkm.pro <- distinct(dlbc.fpkm.pro,gene, .keep_all = T)
-rownames(dlbc.fpkm.pro) <- dlbc.fpkm.pro$gene
-dlbc.fpkm.pro <- dlbc.fpkm.pro[ , -c(1,2)]
-dim(dlbc.fpkm.pro) # 58387  182
-head(dlbc.fpkm.pro)[1:5, 1:5]
-dlbc.phe <- fread("TCGA-PAAD.GDC_phenotype.tsv.gz", header = T, sep = '\t', data.table = F)
-dlbc.phe$submitter_id.samples[1:5]
-rownames(dlbc.phe) <- dlbc.phe$submitter_id.samples
-table(dlbc.phe$sample_type.samples)
-dlbc.phe.t <- filter(dlbc.phe, sample_type.samples == "Primary Tumor")
+PAAD.fpkm <- fread("TCGA-PAAD.htseq_fpkm.tsv.gz", header = T, sep = '\t', data.table = F)
+PAAD.pro <- fread("gencode.v22.annotation.gene.probeMap", header = T, sep = '\t', data.table = F)
+PAAD.pro <- PAAD.pro[ , c(1, 2)]
+PAAD.fpkm.pro <- merge(PAAD.pro, PAAD.fpkm, by.y  = "Ensembl_ID", by.x = "id" )
+PAAD.fpkm.pro <- distinct(PAAD.fpkm.pro,gene, .keep_all = T)
+rownames(PAAD.fpkm.pro) <- PAAD.fpkm.pro$gene
+PAAD.fpkm.pro <- PAAD.fpkm.pro[ , -c(1,2)]
+
+PAAD.phe <- fread("TCGA-PAAD.GDC_phenotype.tsv.gz", header = T, sep = '\t', data.table = F)
+PAAD.phe$submitter_id.samples[1:5]
+rownames(PAAD.phe) <- PAAD.phe$submitter_id.samples
+table(PAAD.phe$sample_type.samples)
+PAAD.phe.t <- filter(PAAD.phe, sample_type.samples == "Primary Tumor")
 #extract primary tumor and normal samples
-dlbc.phe.n <- filter(dlbc.phe, sample_type.samples == "Solid Tissue Normal")
-# merge primary tumor and normal samples
-dlbc.phe.t <- rbind(dlbc.phe.t, dlbc.phe.n)
-merge_phe_fpkm <- intersect(rownames(dlbc.phe.t), colnames(dlbc.fpkm.pro))
-dlbc.exp <- dlbc.fpkm.pro[ , merge_phe_fpkm]
-#GETX
+PAAD.phe.n <- filter(PAAD.phe, sample_type.samples == "Solid Tissue Normal")
+#merge primary tumor and normal samples
+PAAD.phe.t <- rbind(PAAD.phe.t, PAAD.phe.n)
+merge_phe_fpkm <- intersect(rownames(PAAD.phe.t), colnames(PAAD.fpkm.pro))
+PAAD.exp <- PAAD.fpkm.pro[ , merge_phe_fpkm]
+#GETX data
 gtex.exp <- fread("gtex_RSEM_gene_fpkm.gz", header = T, sep = '\t', data.table = F)
 gtex.pro <- fread("gencode.v22.annotation.gene.probemap", header = T, sep = '\t', data.table = F)
 gtex.pro <- gtex.pro[, c(2,3)]
-length(intersect(gtex.pro$id, dlbc.pro$id))  # 60843
-length(intersect(rownames(dlbc.exp), gtex.fpkm.pro$gene)) # 40635
 gtex.fpkm.pro <- merge(gtex.pro, gtex.exp, by.y ="sample", by.x = "id" )
 gtex.phe <- fread("GTEX_phenotype.gz", header = T, sep = '\t', data.table = F)
 rownames(gtex.phe) <- gtex.phe$Sample
-colnames(gtex.phe) <- c("Sample", "body_site_detail (SMTSD)", "primary_site", "gender", "patient", "cohort")
+colnames(gtex.phe) <- c("Sample", "body_site_detail (SMTSD)", "primary_site", "patient", "cohort")
+#take pancreas
 gtex.phe.s <- filter(gtex.phe, primary_site == "Pancreas")
 merge_phe_fpkm_gtex <- intersect(rownames(gtex.phe.s), colnames(gtex.fpkm.pro)) 
 gtex.s <- gtex.fpkm.pro[ , c("gene", merge_phe_fpkm_gtex)]
 gtex.s <- distinct(gtex.s, gene, .keep_all = T)
 rownames(gtex.s) <- gtex.s$gene
+#gtex data is log2(fpkm+0.001)
 gtex.s <- gtex.s[ , -1]
 gtex.s2 <- 2^gtex.s
 gtex.s3 <- log2(gtex.s2-0.001+1)
-all.data <- merge(gtex.s3, dlbc.exp, by = 0)
+#merge data and remove batch effect
+all.data <- merge(gtex.s3, PAAD.exp, by = 0)
 all.data <- column_to_rownames(all.data, "Row.names")
 nromalized.data <- normalizeBetweenArrays(all.data)
 nromalized.data <- as.data.frame(nromalized.data)
 exprSet.all.r=nromalized.data[c("HPGDS"),]
 exprSet.all.r=t(exprSet.all.r)
 exprSet.all.r=as.data.frame(exprSet.all.r)
+write.csv(exprSet.all.r, file = "HPGDS.csv")
+#Remove 4 adjcant samples in TCGA
 x=c(rep("Normal",167),rep("Tumor",177))
 exprSet.all.r$Type=x
 
