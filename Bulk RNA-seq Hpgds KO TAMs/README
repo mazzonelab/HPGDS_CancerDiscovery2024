@@ -1,6 +1,6 @@
 "Bulk RNA-seq Hpgds KO TAMs.R" contains all code needed to reconstruct the figures of the manuscript.
 
-If you would like to re-analyze the data yourself starting from the fastq files, you can download them from the GEO repository.
+If you would like to re-analyze the data yourself starting from the fastq files, you can download them from the GEO repository GSE281745.
 
 Installed packages:
 - FastQC: v0.12.1
