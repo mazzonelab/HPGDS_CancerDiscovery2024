@@ -343,6 +343,68 @@ countData <- as.matrix(as.data.frame(utils::read.csv("/data/genecounts_s2.counts
         plot(Graph)
     dev.off()
 
+# M1 M2 macrophage genesets from this paper
+    custom_gsea_sets <- list(
+        "Mrc1_immunosuppressive_macrophages" = unique(c("C1qa","Mrc1","Sepp1","Ctsb","Retnla","Cd200r1")))
+    #Perform GSEA itself
+    fgseaRes<- fgsea::fgsea(custom_gsea_sets, stats = ranks)
+    #Tidy output
+    fgseaResTidy <- fgseaRes %>%
+        tibble::as_tibble() %>%
+        dplyr::arrange(desc(NES))
+    #Convert column from list to string to allow saving of output as xlsx file
+    fgseaResTidy$leadingEdge  <-  sapply(fgseaResTidy$leadingEdge, toString)
+    #Save output as xlsx file
+    xlsx::write.xlsx(fgseaResTidy, "fGSEA_M1_M2_Macrophage.xlsx", sheetName = "Sheet1", append = FALSE, row.names = TRUE)
+    #Plot a barplot for with the normalized Enrichment score and save as pdf
+    Graph <- ggplot2::ggplot(fgseaResTidy, aes(NES,reorder(pathway, NES))) +
+                geom_col(aes(fill= NES < 0)) +
+                geom_text(aes(label = formatC(padj, format = "e")), position = position_stack(vjust = 0.5), size= 4)+
+                labs(y="", x="Normalized Enrichment Score (fGSEA)", title="")  +
+                geom_vline(xintercept = 0, linetype = "solid", color = "black") +
+                coord_cartesian(xlim=c(-2,2)) +
+                theme_classic() +
+                theme(aspect.ratio=2, legend.position = "none",
+                      axis.text.x = element_text(color="black"), axis.text.y = element_text(color="black", size = 12),
+                      plot.title = element_text(hjust = 0.5, face = "bold"),
+                      panel.grid.major.y = element_line(), panel.grid.minor.y = element_line()) +
+                scale_fill_manual( values = c("#FD8008","#999999")) #Custom colors barplot
+    
+    pdf("fGSEA_barplot_M1_M2_Macrophage.pdf", height = 5, width = 10, useDingbats = F)
+        plot(Graph)
+    dev.off()
+
+# Angiogenesis signature
+    custom_gsea_sets <- list(
+        "Angiogenesis" = unique(c("Fgf2","Pdgfc","Egf","Hgf","Pdgfa","Tgfa","Angpt2","Vegfc","Angpt1","Pdgfb","Vegfa","Vegfb", "Igf1", "Pigf")))
+    #Perform GSEA itself
+    fgseaRes<- fgsea::fgsea(custom_gsea_sets, stats = ranks)
+    #Tidy output
+    fgseaResTidy <- fgseaRes %>%
+        tibble::as_tibble() %>%
+        dplyr::arrange(desc(NES))
+    #Convert column from list to string to allow saving of output as xlsx file
+    fgseaResTidy$leadingEdge  <-  sapply(fgseaResTidy$leadingEdge, toString)
+    #Save output as xlsx file
+    xlsx::write.xlsx(fgseaResTidy, "fGSEA_Angiogenesis.xlsx", sheetName = "Sheet1", append = FALSE, row.names = TRUE)
+    #Plot a barplot for with the normalized Enrichment score and save as pdf
+    Graph <- ggplot2::ggplot(fgseaResTidy, aes(NES,reorder(pathway, NES))) +
+                geom_col(aes(fill= NES < 0)) +
+                geom_text(aes(label = formatC(padj, format = "e")), position = position_stack(vjust = 0.5), size= 4)+
+                labs(y="", x="Normalized Enrichment Score (fGSEA)", title="")  +
+                geom_vline(xintercept = 0, linetype = "solid", color = "black") +
+                coord_cartesian(xlim=c(-2,2)) +
+                theme_classic() +
+                theme(aspect.ratio=2, legend.position = "none",
+                      axis.text.x = element_text(color="black"), axis.text.y = element_text(color="black", size = 12),
+                      plot.title = element_text(hjust = 0.5, face = "bold"),
+                      panel.grid.major.y = element_line(), panel.grid.minor.y = element_line()) +
+                scale_fill_manual( values = c("#FD8008","#999999")) #Custom colors barplot
+    
+    pdf("fGSEA_barplot_Angiogenesis.pdf", height = 5, width = 10, useDingbats = F)
+        plot(Graph)
+    dev.off()
+
 # Show session information
     sessionInfo()
 
