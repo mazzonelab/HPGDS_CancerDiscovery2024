@@ -480,28 +480,8 @@ ggsave(p18, file="paired analysis.jpg", height = 4, width = 8)
 
                        
 ###Figure S1G###
-count=read.delim("GSE120575_Sade_Feldman_melanoma_single_cells_TPM_GEO.txt.gz", stringsAsFactors = F, header = T)
-count[1:10,1:10]
-tirosh_genes <- count[-1,-1]
-tirosh_genes[1:5,1:5]
-meta <- read.delim("meta.txt")
-meta <- meta %>% column_to_rownames("title")
-GSE120575 <- CreateSeuratObject(counts = tirosh_genes, meta.data = meta, min.cells = 3, min.features = 100)
-#remove NA columns
-toRemove <- "H9_P5_M67_L001_T_enriched"
-GSE120575 <- GSE120575[,!colnames(GSE120575) %in% toRemove]
-Idents(GSE120575)=GSE120575$characteristics..response
-GSE120575 <- subset(GSE120575, idents = c("Non-responder", "Responder"))
-#downstream analysis
-GSE120575 <- FindVariableFeatures(GSE120575, selection.method = "vst", nfeatures = 2000)
-GSE120575 <- ScaleData(GSE120575)
-GSE120575 <- RunPCA(GSE120575)
-ElbowPlot(GSE120575, ndims = 50)
-GSE120575 <- FindNeighbors(GSE120575, dims = 1:10)
-GSE120575 <- FindClusters(GSE120575, resolution = 0.3)
-GSE120575 <- RunUMAP(GSE120575, dims = 1:10)
-Idents(GSE120575)=GSE120575$seurat_clusters
-mac_cluster <- subset(GSE120575, idents = c("4,5"))
+Idents(GSE120575)=GSE120575$celltype
+mac_cluster <- subset(GSE120575, idents = c("Monocyte", "Macrophage"))
 view(mac_cluster@meta.data)
 mac_cluster@meta.data <- separate(mac_cluster@meta.data, col = "characteristics..patinet.ID..Pre.baseline..Post..on.treatment.", into = c("treat","postID"), sep = '_')
 mac_cluster@meta.data <- tidyr::unite(mac_cluster@meta.data,"Cell",treat,characteristics..response,sep="_",remove=FALSE)
